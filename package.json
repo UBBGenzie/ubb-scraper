@@ -1,0 +1,15 @@
+{
+  "name": "ubb-scraper",
+  "version": "1.0.0",
+  "description": "UBB Scraper to aplikacja służąca do automatycznego pobierania planów zajęć z Uniwersytetu Bielsko-Bialskiego. Projekt został stworzony w ramach przedmiotu \"Projekt - zespołowe przedsięwzięcie programistyczne\" na 6. semestrze studiów.",
+  "main": "scraper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^24.3.1"
+  }
+}
