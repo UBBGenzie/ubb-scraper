@@ -1,26 +1,20 @@
 const puppeteer = require("puppeteer");
 
-// Funkcja do wyodrębnienia dwóch wyrazów po myślniku, pomijając tytuł naukowy
 function extractName(text) {
   const regex =
     /-\s*(?:prof\. UBB\s*)?(?:(?:prof\.|dr hab\.|dr|mgr|inż\.|hab\.)\s*)+([\p{L}]+)\s+([\p{L}-]+)/u;
   const match = text.match(regex);
-
-  if (match) {
-    return `${match[1]} ${match[2]}`;
-  } else {
-    return "Nie znaleziono imienia i nazwiska";
-  }
+  return match
+    ? `${match[1]} ${match[2]}`
+    : "Nie znaleziono imienia i nazwiska";
 }
 
-// Funkcja do określania priorytetu typu zajęć
 function getPriority(name) {
-  if (name.includes("wyk")) return 1; // Wykłady mają najwyższy priorytet
-  if (name.includes("lab")) return 2; // Laboratoria mają średni priorytet
-  return 3; // Inne typy zajęć (ćwiczenia, lektoraty, projekty) mają najniższy priorytet
+  if (name.includes("wyk")) return 1;
+  if (name.includes("lab")) return 2;
+  return 3;
 }
 
-// Funkcja do pobierania przedmiotów z konkretnej wersji strony (parzyste/nieparzyste)
 async function fetchSubjectsFromPage(page, url, subjectMap) {
   await page.goto(url, { waitUntil: "networkidle2" });
 
@@ -32,7 +26,6 @@ async function fetchSubjectsFromPage(page, url, subjectMap) {
     let subjectCode = name.split(",")[0];
 
     let currentPriority = getPriority(name);
-
     const uniqueKey = `${subjectCode}_${index}`;
 
     if (!subjectMap.has(uniqueKey)) {
@@ -45,12 +38,10 @@ async function fetchSubjectsFromPage(page, url, subjectMap) {
         coordinator_name: "",
       });
     }
-
     index++;
   }
 }
 
-// Funkcja do filtrowania przedmiotów z logiką priorytetów i łączeniem koordynatorów
 function filterSubjectsByPriority(subjects) {
   const filteredSubjects = [];
   const subjectMap = new Map();
@@ -67,7 +58,6 @@ function filterSubjectsByPriority(subjects) {
       });
     } else {
       const existing = subjectMap.get(subjectName);
-
       if (currentPriority === 1) {
         subjectMap.set(subjectName, {
           maxPriority: currentPriority,
@@ -85,7 +75,6 @@ function filterSubjectsByPriority(subjects) {
           existing.subject.priority,
           subject.priority
         );
-
         subjectMap.set(subjectName, existing);
       }
     }
@@ -98,48 +87,26 @@ function filterSubjectsByPriority(subjects) {
   return filteredSubjects;
 }
 
-(async () => {
-  /* 
-  // SEMESTR 2
-  const baseUrl =
-    "https://plany.ubb.edu.pl/plan.php?type=2&id=12626&bw=0&winW=1617&winH=817&loadBG=000000";
-  const urls = [
-    `${baseUrl}&w=706`, // Tydzień parzysty
-    `${baseUrl}&w=707`, // Tydzień nieparzysty
-  ];
-  */
-  /*
-  // SEMESTR 4
-  const baseUrl =
-    "https://plany.ubb.edu.pl/plan.php?type=2&id=12627&bw=0&winW=1617&winH=817&loadBG=000000";
-  const urls = [
-    `${baseUrl}&w=706`, // Tydzień parzysty
-    `${baseUrl}&w=707`, // Tydzień nieparzysty
-  ];
-*/
+const SEMESTR_URLS = {
+  stacjonarne: {
+    2: "https://plany.ubb.edu.pl/plan.php?type=2&id=12626&bw=0&winW=1617&winH=817&loadBG=000000",
+    4: "https://plany.ubb.edu.pl/plan.php?type=2&id=12627&bw=0&winW=1617&winH=817&loadBG=000000",
+    6: "https://plany.ubb.edu.pl/plan.php?type=2&id=12628&bw=0&winW=1617&winH=817&loadBG=000000",
+  },
+  zaoczne: {
+    2: "https://plany.ubb.edu.pl/plan.php?type=2&id=12145&winW=1821&winH=920&loadBG=000000",
+    4: "https://plany.ubb.edu.pl/plan.php?type=2&id=12146&winW=1821&winH=920&loadBG=000000",
+    6: "https://plany.ubb.edu.pl/plan.php?type=2&id=136938&winW=1821&winH=920&loadBG=000000",
+  },
+};
 
-  // SEMESTR 6
-  const baseUrl =
-    "https://plany.ubb.edu.pl/plan.php?type=2&id=12628&bw=0&winW=1617&winH=817&loadBG=000000";
-  const urls = [
-    `${baseUrl}&w=706`, // Tydzień parzysty
-    `${baseUrl}&w=707`, // Tydzień nieparzysty
-  ];
+const WEEK_PARAMS = {
+  stacjonarne: ["w=706", "w=707"],
+  zaoczne: ["w=705", "w=707"],
+};
 
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-
-  let subjectMap = new Map();
-  let coordinatorMap = new Map();
-
-  for (const url of urls) {
-    await fetchSubjectsFromPage(page, url, subjectMap);
-  }
-
-  let subjects = Array.from(subjectMap.values());
-
-  // Pobranie pełnych nazw przedmiotów z legendy
-  const legend = await page.evaluate(() => {
+async function fetchLegend(page) {
+  return await page.evaluate(() => {
     let legendMap = new Map();
     let legendElement = document.querySelector("#legend div:nth-child(2)");
     if (legendElement) {
@@ -159,6 +126,28 @@ function filterSubjectsByPriority(subjects) {
     }
     return Object.fromEntries(legendMap);
   });
+}
+
+async function scrapeData(semestr, mode) {
+  if (!SEMESTR_URLS[mode] || !SEMESTR_URLS[mode][semestr]) {
+    throw new Error("Nieprawidłowy semestr lub tryb studiów");
+  }
+
+  const baseUrl = SEMESTR_URLS[mode][semestr];
+  const urls = WEEK_PARAMS[mode].map((week) => `${baseUrl}&${week}`);
+
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  let subjectMap = new Map();
+  let coordinatorMap = new Map();
+
+  for (const url of urls) {
+    await fetchSubjectsFromPage(page, url, subjectMap);
+  }
+
+  let subjects = Array.from(subjectMap.values());
+  const legend = await fetchLegend(page);
 
   subjects.forEach((subject) => {
     if (legend[subject.przedmiot]) {
@@ -227,14 +216,9 @@ function filterSubjectsByPriority(subjects) {
   });
 
   const filteredSubjects = filterSubjectsByPriority(subjects);
-  console.log("Zebrane dane:", JSON.stringify(filteredSubjects, null, 2));
-
-  // Dodatkowe komunikaty o koordynatorach
-  filteredSubjects.forEach((subject) => {
-    console.log(
-      `Koordynatorem przedmiotu ${subject.przedmiot} jest ${subject.coordinator_name}`
-    );
-  });
 
   await browser.close();
-})();
+  return filteredSubjects;
+}
+
+module.exports = scrapeData;
