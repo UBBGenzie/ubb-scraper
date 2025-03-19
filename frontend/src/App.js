@@ -187,6 +187,9 @@ function App() {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
   );
+  const normalizeSubjectName = (name) => {
+    return name === "Ptg" ? "Podstawy tworzenia gier" : name;
+  };
 
   useEffect(() => {
     localStorage.setItem("theme", darkMode ? "dark" : "light");
@@ -245,7 +248,9 @@ function App() {
         <SubjectList>
           {subjects.map((subject) => (
             <SubjectItem key={subject.id}>
-              <SubjectTitle>{subject.przedmiot}</SubjectTitle>
+              <SubjectTitle>
+                {normalizeSubjectName(subject.przedmiot)}
+              </SubjectTitle>
               <Coordinator>
                 Koordynator: {subject.coordinator_name || "Brak danych"}
               </Coordinator>
