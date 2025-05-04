@@ -2,7 +2,7 @@
 
 Aplikacja webowa do przeglądania planu zajęć dla kierunku **Informatyka** na **Uniwersytecie Bielsko-Bialskim (UBB)**. Umożliwia wybór semestru, trybu studiów oraz dynamiczne pobieranie przedmiotów i ich koordynatorów.
 
-![Demo](https://ik.imagekit.io/lorinnio/image.png?updatedAt=1746380116800)
+![Demo]([https://ik.imagekit.io/lorinnio/image.png?updatedAt=1746380116800](https://ik.imagekit.io/lorinnio/image%20(1).png?updatedAt=1746380265530))
 
 ---
 
